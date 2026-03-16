@@ -2,31 +2,42 @@
 Biostat AutoResearch: statistical analysis method.
 THIS IS THE FILE THE AI AGENT MODIFIES.
 
-Baseline: two-sample t-test on complete cases.
-The agent can replace this with any analysis method as long as
-analyze_trial() returns {"p_value", "estimate", "ci_lower", "ci_upper"}.
+ANCOVA: OLS regression adjusting for baseline severity.
 """
 
 import numpy as np
 from scipy import stats
+import statsmodels.api as sm
 
 
 def analyze_trial(data: dict) -> dict:
     arm = data["arm"]
     outcome = data["outcome"]
+    baseline_severity = data["baseline_severity"]
 
+    # Complete case analysis
     mask = ~np.isnan(outcome)
-    trt = outcome[mask & (arm == 1)]
-    ctl = outcome[mask & (arm == 0)]
+    y = outcome[mask]
+    x_arm = arm[mask]
+    x_bl = baseline_severity[mask]
 
-    t_stat, p_two = stats.ttest_ind(trt, ctl, equal_var=False)
-    p_value = p_two / 2 if t_stat < 0 else 1.0 - p_two / 2
+    # ANCOVA: outcome ~ arm + baseline_severity
+    X = np.column_stack([np.ones(len(y)), x_arm, x_bl])
+    model = sm.OLS(y, X).fit()
 
-    estimate = trt.mean() - ctl.mean()
+    # Treatment effect is coefficient of arm (index 1)
+    estimate = model.params[1]
+    se = model.bse[1]
+    t_stat = estimate / se
+    df = model.df_resid
 
-    se = np.sqrt(np.var(trt, ddof=1) / len(trt) + np.var(ctl, ddof=1) / len(ctl))
-    ci_lower = estimate - 1.96 * se
-    ci_upper = estimate + 1.96 * se
+    # One-sided p-value (testing treatment < placebo)
+    p_value = stats.t.cdf(t_stat, df)
+
+    # 95% CI
+    t_crit = stats.t.ppf(0.975, df)
+    ci_lower = estimate - t_crit * se
+    ci_upper = estimate + t_crit * se
 
     return {
         "p_value": p_value,
