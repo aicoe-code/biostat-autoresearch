@@ -1,5 +1,5 @@
 import numpy as np
-from prepare import generate_trial
+from prepare import generate_trial, evaluate_power
 
 def test_generate_trial_returns_required_keys():
     data = generate_trial(n_per_arm=50, true_effect=-0.5, seed=42)
@@ -44,3 +44,41 @@ def test_generate_trial_covariate_ranges():
     assert 45 < data["age"].mean() < 65
     assert set(np.unique(data["sex"])) == {0, 1}
     assert set(np.unique(data["site"])).issubset({0, 1, 2, 3})
+
+
+def _dummy_analyze(data):
+    arm = data["arm"]
+    outcome = data["outcome"]
+    mask = ~np.isnan(outcome)
+    trt = outcome[mask & (arm == 1)]
+    ctl = outcome[mask & (arm == 0)]
+    diff = trt.mean() - ctl.mean()
+    from scipy import stats
+    t_stat, p_two = stats.ttest_ind(trt, ctl, equal_var=False)
+    p_val = p_two / 2 if t_stat < 0 else 1 - p_two / 2
+    se = np.sqrt(np.var(trt, ddof=1) / len(trt) + np.var(ctl, ddof=1) / len(ctl))
+    return {
+        "p_value": p_val,
+        "estimate": diff,
+        "ci_lower": diff - 1.96 * se,
+        "ci_upper": diff + 1.96 * se,
+    }
+
+
+def test_evaluate_power_returns_required_keys():
+    result = evaluate_power(_dummy_analyze, n_sims=100, seed=42)
+    required = {"power", "type1_error", "bias", "coverage", "mean_estimate", "n_sims"}
+    assert set(result.keys()) == required
+
+
+def test_evaluate_power_n_sims_matches():
+    result = evaluate_power(_dummy_analyze, n_sims=200, seed=42)
+    assert result["n_sims"] == 200
+
+
+def test_evaluate_power_metrics_reasonable():
+    result = evaluate_power(_dummy_analyze, n_sims=500, seed=42)
+    assert 0.5 < result["power"] < 1.0
+    assert 0.0 <= result["type1_error"] < 0.06
+    assert abs(result["bias"]) < 0.2
+    assert 0.8 < result["coverage"] < 1.0

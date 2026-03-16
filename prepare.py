@@ -62,3 +62,76 @@ def generate_trial(n_per_arm: int = N_PER_ARM, true_effect: float = TRUE_EFFECT,
         "baseline_severity": baseline_severity,
         "site": site,
     }
+
+
+# ---------------------------------------------------------------------------
+# Evaluation Harness (DO NOT MODIFY)
+# ---------------------------------------------------------------------------
+
+def evaluate_power(analyze_fn: callable, n_sims: int = N_SIMS,
+                   true_effect: float = TRUE_EFFECT, n_per_arm: int = N_PER_ARM,
+                   alpha: float = ALPHA, time_budget: int = TIME_BUDGET,
+                   seed: int | None = None) -> dict:
+    base_rng = np.random.default_rng(seed)
+    t_start = time.time()
+    timed_out = False
+
+    power_rejects = 0
+    estimates = []
+    coverage_hits = 0
+    power_sims_done = 0
+
+    for i in range(n_sims):
+        if time.time() - t_start > time_budget:
+            timed_out = True
+            break
+        trial_seed = int(base_rng.integers(0, 2**31))
+        data = generate_trial(n_per_arm=n_per_arm, true_effect=true_effect, seed=trial_seed)
+        try:
+            result = analyze_fn(data)
+            p_val = result["p_value"]
+            est = result["estimate"]
+            ci_lo = result["ci_lower"]
+            ci_hi = result["ci_upper"]
+            if p_val < alpha:
+                power_rejects += 1
+            estimates.append(est)
+            if ci_lo <= true_effect <= ci_hi:
+                coverage_hits += 1
+        except Exception:
+            pass
+        power_sims_done += 1
+
+    t1e_rejects = 0
+    t1e_sims_done = 0
+
+    if not timed_out:
+        for i in range(n_sims):
+            if time.time() - t_start > time_budget:
+                timed_out = True
+                break
+            trial_seed = int(base_rng.integers(0, 2**31))
+            data = generate_trial(n_per_arm=n_per_arm, true_effect=0.0, seed=trial_seed)
+            try:
+                result = analyze_fn(data)
+                if result["p_value"] < alpha:
+                    t1e_rejects += 1
+            except Exception:
+                pass
+            t1e_sims_done += 1
+
+    power = power_rejects / max(power_sims_done, 1)
+    type1_error = t1e_rejects / max(t1e_sims_done, 1) if t1e_sims_done > 0 else float("nan")
+    mean_est = float(np.mean(estimates)) if estimates else float("nan")
+    bias = mean_est - true_effect if estimates else float("nan")
+    coverage = coverage_hits / max(power_sims_done, 1)
+    actual_sims = power_sims_done
+
+    return {
+        "power": power,
+        "type1_error": type1_error,
+        "bias": bias,
+        "coverage": coverage,
+        "mean_estimate": mean_est,
+        "n_sims": actual_sims,
+    }
