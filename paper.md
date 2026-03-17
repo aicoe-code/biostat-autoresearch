@@ -1,5 +1,7 @@
 # Autonomous Statistical Method Optimisation for Clinical Trials: An Application of AI-Driven Experimentation Loops to Biostatistics
 
+**Generated entirely by Claude Code (Anthropic).** The framework design, implementation, experimentation, analysis, and this paper were produced by Claude Code in a single interactive session directed by a human operator. No code was written by hand. The human provided the initial concept, answered design questions, and approved the approach — all implementation, testing, autonomous experimentation, and writing was performed by the AI agent.
+
 ## Abstract
 
 We present a framework for autonomous optimisation of statistical analysis methods in clinical trial design, adapted from Karpathy's autoresearch paradigm for machine learning. An AI agent iteratively modifies a statistical analysis function, evaluates operating characteristics via Monte Carlo simulation, and retains or discards changes based on pre-specified acceptance criteria. Applied to a simulated Phase III superiority trial with a continuous endpoint, the framework identified ANCOVA with full covariate adjustment as the optimal method, increasing power from 0.806 (baseline Welch t-test) to 0.986 while maintaining type I error control at 0.021. The framework is open-source, requires no specialised hardware, and is designed for extension to adaptive designs, time-to-event endpoints, and multiplicity strategies.
