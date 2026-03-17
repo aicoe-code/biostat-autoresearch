@@ -6,7 +6,7 @@
 
 We present a framework for autonomous optimisation of statistical analysis methods in clinical trial design, adapted from Karpathy's autoresearch paradigm for machine learning. An AI agent iteratively modifies a statistical analysis function, evaluates operating characteristics via Monte Carlo simulation, and retains or discards changes based on pre-specified acceptance criteria. Applied to a simulated Phase III superiority trial with a continuous endpoint, the framework identified ANCOVA with full covariate adjustment as the optimal method, increasing power from 0.806 (baseline Welch t-test) to 0.986 while maintaining type I error control at 0.021. The framework is open-source, requires no specialised hardware, and is designed for extension to adaptive designs, time-to-event endpoints, and multiplicity strategies.
 
-**Repository:** Local — `paperclip/biostat-autoresearch/` (not yet published)
+**Repository:** https://github.com/aicoe-code/biostat-autoresearch
 
 ---
 
