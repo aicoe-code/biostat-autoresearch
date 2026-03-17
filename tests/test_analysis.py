@@ -40,3 +40,15 @@ def test_analyze_trial_no_effect():
     data = generate_trial(n_per_arm=100, true_effect=0.0, seed=42)
     result = analyze_trial(data)
     assert 0.0 <= result["p_value"] <= 1.0
+
+
+def test_analyze_trial_covariate_adjustment_improves_estimate():
+    """ANCOVA estimate should be closer to true effect than raw mean difference."""
+    data = generate_trial(n_per_arm=500, true_effect=-0.5, seed=42)
+    result = analyze_trial(data)
+    # Raw mean difference (no adjustment)
+    mask = ~np.isnan(data["outcome"])
+    raw_diff = (data["outcome"][mask & (data["arm"] == 1)].mean()
+                - data["outcome"][mask & (data["arm"] == 0)].mean())
+    # ANCOVA estimate should be at least as close to -0.5 as raw
+    assert abs(result["estimate"] - (-0.5)) <= abs(raw_diff - (-0.5)) + 0.05

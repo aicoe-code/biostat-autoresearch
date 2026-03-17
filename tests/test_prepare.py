@@ -82,3 +82,26 @@ def test_evaluate_power_metrics_reasonable():
     assert 0.0 <= result["type1_error"] < 0.06
     assert abs(result["bias"]) < 0.2
     assert 0.8 < result["coverage"] < 1.0
+
+
+def test_evaluate_power_time_budget_truncates():
+    """A slow analyze_fn should be truncated by time budget."""
+    import time as _time
+
+    def _slow_analyze(data):
+        _time.sleep(0.05)  # 50ms per trial
+        return _dummy_analyze(data)
+
+    # With 1s budget and 50ms per trial, should complete ~20 sims (not 200)
+    result = evaluate_power(_slow_analyze, n_sims=200, time_budget=1, seed=42)
+    assert result["n_sims"] < 200
+    assert result["n_sims"] > 0
+
+
+def test_evaluate_power_handles_crashing_analysis():
+    """An analyze_fn that always crashes should return power=0."""
+    def _crashing_analyze(data):
+        raise ValueError("crash")
+
+    result = evaluate_power(_crashing_analyze, n_sims=50, seed=42)
+    assert result["power"] == 0.0

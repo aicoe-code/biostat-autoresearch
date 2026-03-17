@@ -7,7 +7,6 @@ a fixed evaluation harness for comparing statistical analysis methods.
 """
 
 import time
-import math
 import numpy as np
 
 

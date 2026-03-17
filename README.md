@@ -13,7 +13,7 @@ pip install -e ".[dev]"
 ## Quick Start
 
 ```bash
-# Run the baseline (two-sample t-test)
+# Run the current analysis method
 python run_experiment.py
 
 # Run with fewer sims for quick testing
